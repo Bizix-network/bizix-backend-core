@@ -26,7 +26,7 @@ Acesta este backend-ul pentru aplicația Bizix, dezvoltat folosind Node.js și E
 
 * Backend-ul rulează pe portul 3000 în mod implicit.
 * Documentația API va fi disponibilă în curând.
-* Pentru orice întrebări sau probleme, contactați [adresa de email sau nume utilizator]. 
+* Pentru orice întrebări sau probleme, contactați dev@bizix.ro
 
 ```
 
