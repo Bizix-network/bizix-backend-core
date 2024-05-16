@@ -1,33 +1,29 @@
 ```md
 # bizix-backend-core
 
-Acesta este backend-ul pentru aplicația Bizix, dezvoltat folosind Node.js și Express.js.
+This is the backend for the Bizix application, developed using Node.js and Express.js.
 
-## Instrucțiuni de pornire
+## Startup Instructions
 
-1. Clonează acest repository: 
+1. Clone this repository:
    ```bash
    git clone https://github.com/[username]/bizix-backend-core.git
    ```
-2. Navighează la directorul proiectului:
+2. Navigate to the project directory:
    ```bash
    cd bizix-backend-core
    ```
-3. Instalează dependențele:
+3. Install dependencies:
    ```bash
    npm install
    ```
-4. Pornește serverul de dezvoltare:
+4. Start the development server:
    ```bash
    npm run start
    ```
 
-## Informații adiționale
+## Additional Information
 
-* Backend-ul rulează pe portul 3000 în mod implicit.
-* Documentația API va fi disponibilă în curând.
-* Pentru orice întrebări sau probleme, contactați [adresa de email sau nume utilizator]. 
+* The backend runs on port 8080 by default.
+* API documentation will be available soon.
 
-```
-
-**Notă:** Înlocuiește `[username]` cu numele tău de utilizator GitHub.
