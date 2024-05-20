@@ -5,6 +5,7 @@ const mongoose = require('mongoose');
 require('dotenv').config(); // Incarca variabilele din .env
 require('./config/passport'); // Configurare Passport
 const authRoutes = require('./routes/auth');
+const proxmoxRoutes = require('./routes/proxmox');
 const cors = require('cors');
 
 const app = express();
@@ -12,19 +13,23 @@ const PORT = process.env.PORT || 5000;
 
 // Configurare CORS
 app.use(cors({
-    origin: 'http://127.0.0.1:5173', // Permite cereri de la această origine
-    methods: ['GET', 'POST', 'PUT', 'DELETE'], // Permite aceste metode HTTP
-    allowedHeaders: ['Content-Type', 'Authorization'], // Permite aceste headere
-    credentials: true // Permite trimiterea cookie-urilor și a credențialelor
-  }));
-  
+  origin: 'http://127.0.0.1:5173', // Permite cereri de la această origine
+  methods: ['GET', 'POST', 'PUT', 'DELETE'], // Permite aceste metode HTTP
+  allowedHeaders: ['Content-Type', 'Authorization'], // Permite aceste headere
+  credentials: true // Permite trimiterea cookie-urilor și a credențialelor
+}));
 
 app.use(bodyParser.json());
 app.use(passport.initialize());
 
 app.use('/', authRoutes);
+app.use('/proxmox', proxmoxRoutes);
 
-mongoose.connect(process.env.MONGODB_URI);
+// Setarea strictQuery
+mongoose.set('strictQuery', true);
+
+mongoose.connect(process.env.MONGODB_URI, {
+});
 mongoose.connection.on('error', console.error.bind(console, 'MongoDB connection error:'));
 
 app.listen(PORT, () => {
