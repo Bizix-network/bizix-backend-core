@@ -30,18 +30,19 @@ router.post('/create-vm', passport.authenticate('jwt', { session: false }), asyn
     console.log('Received request to create VM with the following parameters:', req.body);
 
     // Crearea unei noi VM pe baza unui template
+    console.log(`ID0: ${storage}:${vmid}/vm-${vmid}-disk-0,size=${diskSize}G,format=qcow2`);
     console.log('Sending request to create VM...');
     const response = await proxmoxInstance.post(`/nodes/${node}/qemu`, {
       vmid,
       name: vmName,
       memory,
       cores,
-      ide0: `${storage}:${vmid}/vm-${vmid}-disk-0.qcow2,format=qcow2,size=${diskSize}G`,
+      ide0: `${storage}:${diskSize},format=qcow2`,
       net0: 'virtio,bridge=vmbr0',
       ostype: 'l26',
-      template: 1
+      template: 0
     });
-
+  
     const task = response.data.data;
     console.log('VM creation task started:', task);
 
