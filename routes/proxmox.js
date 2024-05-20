@@ -16,46 +16,82 @@ const proxmoxInstance = axios.create({
   httpsAgent: new (require('https').Agent)({ rejectUnauthorized: false }) // Dacă folosești un certificat auto-semnat
 });
 
+// Funcție pentru a verifica configurarea IP a VM-ului
+const checkVMIPConfig = async (node, vmid) => {
+  try {
+    const response = await proxmoxInstance.get(`/nodes/${node}/qemu/${vmid}/config`);
+    const config = response.data.data;
+    console.log('VM IP Configuration:', config);
+    return config;
+  } catch (error) {
+    console.error('Error fetching VM IP configuration:', error.message);
+    if (error.response) {
+      console.error('Full error response:', error.response.data);
+    }
+  }
+};
+
 // Endpoint pentru crearea unei VM pe baza unui template
 router.post('/create-vm', passport.authenticate('jwt', { session: false }), async (req, res) => {
-  const { vmid, node, storage, vmName, memory, cores, diskSize, companyName, expiresAt } = req.body;
+  const { vmid, node, vmName, ipAddress, companyName, expiresAt } = req.body;
   const userId = req.user._id;
 
   // Verificarea câmpurilor necesare
-  if (!vmid || !node || !storage || !vmName || !memory || !cores || !diskSize || !companyName || !expiresAt) {
+  if (!vmid || !node || !vmName || !ipAddress || !companyName || !expiresAt) {
     return res.status(400).json({ error: 'All fields are required' });
   }
 
   try {
     console.log('Received request to create VM with the following parameters:', req.body);
 
-    // Crearea unei noi VM pe baza unui template
-    console.log('Sending request to create VM...');
-    const response = await proxmoxInstance.post(`/nodes/${node}/qemu`, {
-      vmid,
-      name: vmName,
-      memory,
-      cores,
-      ide0: `${storage}:${diskSize},format=qcow2`,
-      net0: 'virtio,bridge=vmbr0',
-      ostype: 'l26',
-      template: 0
-    });
+  // Clonarea template-ului
+  console.log('Cloning template to create new VM...');
+  const cloneResponse = await proxmoxInstance.post(`/nodes/${node}/qemu/1003/clone`, {
+    newid: vmid,
+    name: vmName,
+    target: node,
+    full: 1,
+    format: 'qcow2'
+  });
   
-    const task = response.data.data;
-    console.log('VM creation task started:', task);
+  const task = cloneResponse.data.data;
+  console.log('VM cloning task started:', task);
+
+   // Așteaptă finalizarea sarcinii de clonare (opțional)
+   // console.log('Waiting for VM cloning task to complete...');
+   // await new Promise(resolve => setTimeout(resolve, 10000)); // Așteaptă 10 secunde
+
+    // Adăugarea unui drive CloudInit
+    // console.log('Adding CloudInit drive...');
+    //const cloudInitResponse = await proxmoxInstance.post(`/nodes/${node}/qemu/${vmid}/config`, {
+    //    'ide2': 'local-lvm:cloudinit'
+    // });
+  
+    // console.log('CloudInit drive added:', cloudInitResponse.data);
+
+    // Configurarea adresei IP folosind cloud-init
+    console.log('Configuring VM IP address...');
+    const configResponse = await proxmoxInstance.post(`/nodes/${node}/qemu/${vmid}/config`, {
+      'ipconfig0': `ip=${ipAddress},gw=10.2.3.1`, 
+      'nameserver': '8.8.8.8'
+    });
+
+    console.log('VM IP address configured:', configResponse.data);
+
+    // Verificarea configurării IP
+    const vmConfig = await checkVMIPConfig(node, vmid);
+    console.log('Verified VM IP Configuration:', vmConfig);
 
     // Salvarea informațiilor VM în baza de date
-      
     const newVM = new VM({
       vmid,
       userId,
       name: vmName,
       node,
-      storage,
-      memory,
-      cores,
-      diskSize,
+      storage: 0, // Storage-ul specificat la clonare, nu este necesar aici
+      memory: 0, // Configurația hardware a template-ului
+      cores: 0, // Configurația hardware a template-ului
+      diskSize: 0, // Configurația hardware a template-ului
       companyName,
       expiresAt,
       status: 'created'
