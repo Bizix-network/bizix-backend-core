@@ -16,6 +16,33 @@ const proxmoxInstance = axios.create({
   httpsAgent: new (require('https').Agent)({ rejectUnauthorized: false }) // Dacă folosești un certificat auto-semnat
 });
 
+// Funcție pentru a verifica statusul unei sarcini
+const checkTaskStatus = async (node, taskid) => {
+  try {
+    const response = await proxmoxInstance.get(`/nodes/${node}/tasks/${taskid}/status`);
+    return response.data.data;
+  } catch (error) {
+    console.error('Error checking task status:', error.message);
+    throw error;
+  }
+};
+
+// Funcție pentru a aștepta finalizarea unei sarcini
+const waitForTaskCompletion = async (node, taskid) => {
+  while (true) {
+    const status = await checkTaskStatus(node, taskid);
+    if (status.status === 'stopped') {
+      if (status.exitstatus === 'OK') {
+        console.log('Task completed successfully.');
+        return;
+      } else {
+        throw new Error(`Task failed with exit status: ${status.exitstatus}`);
+      }
+    }
+    await new Promise(resolve => setTimeout(resolve, 5000)); // Așteaptă 5 secunde înainte de a verifica din nou
+  }
+};
+
 // Funcție pentru a verifica configurarea IP a VM-ului
 const checkVMIPConfig = async (node, vmid) => {
   try {
@@ -56,23 +83,20 @@ router.post('/create-vm', passport.authenticate('jwt', { session: false }), asyn
   
   const task = cloneResponse.data.data;
   console.log('VM cloning task started:', task);
+      
+  // Așteaptă finalizarea sarcinii de clonare
+  console.log('Waiting for VM cloning task to complete...');
+  await waitForTaskCompletion(node, task);
 
    // Așteaptă finalizarea sarcinii de clonare (opțional)
    // console.log('Waiting for VM cloning task to complete...');
    // await new Promise(resolve => setTimeout(resolve, 10000)); // Așteaptă 10 secunde
 
-    // Adăugarea unui drive CloudInit
-    // console.log('Adding CloudInit drive...');
-    //const cloudInitResponse = await proxmoxInstance.post(`/nodes/${node}/qemu/${vmid}/config`, {
-    //    'ide2': 'local-lvm:cloudinit'
-    // });
-  
-    // console.log('CloudInit drive added:', cloudInitResponse.data);
-
     // Configurarea adresei IP folosind cloud-init
     console.log('Configuring VM IP address...');
     const configResponse = await proxmoxInstance.post(`/nodes/${node}/qemu/${vmid}/config`, {
       'ipconfig0': `ip=${ipAddress},gw=10.2.3.1`, 
+      'name': `${vmName}`,
       'nameserver': '8.8.8.8'
     });
 
@@ -81,6 +105,11 @@ router.post('/create-vm', passport.authenticate('jwt', { session: false }), asyn
     // Verificarea configurării IP
     const vmConfig = await checkVMIPConfig(node, vmid);
     console.log('Verified VM IP Configuration:', vmConfig);
+
+    // Pornirea VM-ului
+    console.log('Starting the VM...');
+    const startResponse = await proxmoxInstance.post(`/nodes/${node}/qemu/${vmid}/status/start`);
+    console.log('VM started:', startResponse.data);
 
     // Salvarea informațiilor VM în baza de date
     const newVM = new VM({
