@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const IPAddress = require('../models/IPAddress');
+const Template = require('../models/Template');
 
 mongoose.connect('mongodb://bizixdb:asdadasdadadssad@127.0.0.1:27017/bizix1');
 
@@ -16,6 +17,15 @@ const ipAddresses = [
   { ipAddress: '10.2.3.129', gateway: '10.2.3.1' }
 ];
 
+const templates = [
+  { proxmoxId: 1003, templateName: 'ERP', version: '1.0', active: true },
+  { proxmoxId: 1004, templateName: 'ERP', version: '1.1', active: true },
+  { proxmoxId: 1005, templateName: 'CRM', version: '1.0', active: true },
+  { proxmoxId: 1006, templateName: 'CRM', version: '1.1', active: true },
+  { proxmoxId: 1007, templateName: 'Facturare', version: '1.0', active: true },
+  { proxmoxId: 1008, templateName: 'Facturare', version: '1.1', active: true }
+];
+
 mongoose.connection.once('open', async () => {
   try {
     // Șterge toate documentele existente în colecția IPAddress
@@ -25,6 +35,14 @@ mongoose.connection.once('open', async () => {
     // Inserarea noilor adrese IP
     await IPAddress.insertMany(ipAddresses);
     console.log('Adrese IP inserate cu succes');
+
+    // Șterge toate documentele existente în colecția Template
+    await Template.deleteMany({});
+    console.log('Colecția Template a fost ștearsă cu succes.');
+
+    // Inserarea noilor template-uri
+    await Template.insertMany(templates);
+    console.log('Template-uri inserate cu succes');
   } catch (err) {
     console.error('Eroare la manipularea colecției IPAddress:', err);
   } finally {

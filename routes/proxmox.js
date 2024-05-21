@@ -7,6 +7,7 @@ const path = require('path');
 const mongoose = require('mongoose');
 const VM = require('../models/VM');
 const IPAddress = require('../models/IPAddress');
+const Template = require('../models/Template');
 
 // Configurare Proxmox API Client
 const proxmoxInstance = axios.create({
@@ -59,18 +60,49 @@ const checkVMIPConfig = async (node, vmid) => {
   }
 };
 
+// Funcție pentru a prelua următorul `vmid` disponibil
+const getNextVmid = async () => {
+  try {
+    const response = await proxmoxInstance.get('/cluster/resources', {
+      params: { type: 'vm' }
+    });
+
+    const vms = response.data.data;
+    const vmIds = vms.map(vm => parseInt(vm.vmid, 10)).filter(id => id >= 1000); // Filtrare pentru ID-uri de forma 1xxx
+    const maxVmid = Math.max(...vmIds, 999); // Începem de la 999 dacă nu există VM-uri
+
+    return maxVmid + 1;
+  } catch (error) {
+    console.error('Error fetching next VMID:', error.message);
+    throw error;
+  }
+};
+
 // Endpoint pentru crearea unei VM pe baza unui template
 router.post('/create-vm', passport.authenticate('jwt', { session: false }), async (req, res) => {
-  const { vmid, node, vmName, companyName, expiresAt } = req.body;
+  const { node, vmName, vmVersion, companyName, expiresAt } = req.body;
   const userId = req.user._id;
 
   // Verificarea câmpurilor necesare
-  if (!vmid || !node || !vmName || !companyName || !expiresAt) {
+  if (!node || !vmName || !vmVersion || !companyName || !expiresAt) {
     return res.status(400).json({ error: 'All fields are required' });
   }
 
   try {
     console.log('Received request to create VM with the following parameters:', req.body);
+
+   // Verificarea existenței template-ului specificat
+   const template = await Template.findOne({ templateName: vmName, version: vmVersion, active: true });
+   if (!template) {
+     return res.status(400).json({ error: 'Template not found or inactive' });
+   }
+
+   const { proxmoxId } = template;
+   console.log('Found template with Proxmox ID:', proxmoxId);
+
+    // Generarea următorului `vmid` disponibil
+    const vmid = await getNextVmid();
+    console.log('Generated VMID:', vmid);
 
      // Alocarea unei adrese IP disponibile
      const ipAddressDoc = await IPAddress.findOneAndUpdate(
@@ -89,10 +121,11 @@ router.post('/create-vm', passport.authenticate('jwt', { session: false }), asyn
     console.log('Allocated IP address:', ipAddress, 'with gateway:', gateway);
 
   // Clonarea template-ului
+  const completeVmName=`${vmName}-v${vmVersion}-${proxmoxId}`;
   console.log('Cloning template to create new VM...');
-  const cloneResponse = await proxmoxInstance.post(`/nodes/${node}/qemu/1003/clone`, {
+  const cloneResponse = await proxmoxInstance.post(`/nodes/${node}/qemu/${proxmoxId}/clone`, {
     newid: vmid,
-    name: vmName,
+    name: completeVmName,
     target: node,
     full: 1,
     format: 'qcow2'
@@ -113,7 +146,7 @@ router.post('/create-vm', passport.authenticate('jwt', { session: false }), asyn
     console.log('Configuring VM IP address with Cloud-Init...');
     const configResponse = await proxmoxInstance.put(`/nodes/${node}/qemu/${vmid}/config`, {
       'ipconfig0': `ip=${ipAddress}/24,gw=${gateway}`, // Utilizează gateway-ul alocat din baza de date
-      'name': `${vmName}`,
+      'name': `${completeVmName}`,
       'nameserver': '8.8.8.8'
     });
 
