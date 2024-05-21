@@ -6,6 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const mongoose = require('mongoose');
 const VM = require('../models/VM');
+const IPAddress = require('../models/IPAddress');
 
 // Configurare Proxmox API Client
 const proxmoxInstance = axios.create({
@@ -60,16 +61,32 @@ const checkVMIPConfig = async (node, vmid) => {
 
 // Endpoint pentru crearea unei VM pe baza unui template
 router.post('/create-vm', passport.authenticate('jwt', { session: false }), async (req, res) => {
-  const { vmid, node, vmName, ipAddress, companyName, expiresAt } = req.body;
+  const { vmid, node, vmName, companyName, expiresAt } = req.body;
   const userId = req.user._id;
 
   // Verificarea câmpurilor necesare
-  if (!vmid || !node || !vmName || !ipAddress || !companyName || !expiresAt) {
+  if (!vmid || !node || !vmName || !companyName || !expiresAt) {
     return res.status(400).json({ error: 'All fields are required' });
   }
 
   try {
     console.log('Received request to create VM with the following parameters:', req.body);
+
+     // Alocarea unei adrese IP disponibile
+     const ipAddressDoc = await IPAddress.findOneAndUpdate(
+      { allocatedTo: null },
+      { $set: { allocatedTo: userId, allocatedAt: new Date() } },
+      { new: true }
+    );
+
+    if (!ipAddressDoc) {
+      //return res.status(400).json({ error: 'No available IP addresses' });
+      // Aruncă o eroare dacă nu există adrese IP disponibile
+      throw new Error('No available IP addresses');
+    }
+
+    const { ipAddress, gateway } = ipAddressDoc;
+    console.log('Allocated IP address:', ipAddress, 'with gateway:', gateway);
 
   // Clonarea template-ului
   console.log('Cloning template to create new VM...');
@@ -92,10 +109,10 @@ router.post('/create-vm', passport.authenticate('jwt', { session: false }), asyn
    // console.log('Waiting for VM cloning task to complete...');
    // await new Promise(resolve => setTimeout(resolve, 10000)); // Așteaptă 10 secunde
 
-    // Configurarea adresei IP folosind cloud-init
-    console.log('Configuring VM IP address...');
-    const configResponse = await proxmoxInstance.post(`/nodes/${node}/qemu/${vmid}/config`, {
-      'ipconfig0': `ip=${ipAddress},gw=10.2.3.1`, 
+    // Configurarea adresei IP folosind Cloud-Init
+    console.log('Configuring VM IP address with Cloud-Init...');
+    const configResponse = await proxmoxInstance.put(`/nodes/${node}/qemu/${vmid}/config`, {
+      'ipconfig0': `ip=${ipAddress}/24,gw=${gateway}`, // Utilizează gateway-ul alocat din baza de date
       'name': `${vmName}`,
       'nameserver': '8.8.8.8'
     });
