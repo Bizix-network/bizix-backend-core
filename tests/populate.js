@@ -20,7 +20,7 @@ const ipAddresses = [
 const templates = [
   { proxmoxId: 1003, templateName: 'ERP', version: '1.0', active: true },
   { proxmoxId: 1004, templateName: 'ERP', version: '1.1', active: true },
-  { proxmoxId: 1005, templateName: 'CRM', version: '1.0', active: true },
+  { proxmoxId: 1101, templateName: 'CRM', version: '1.0', active: true },
   { proxmoxId: 1006, templateName: 'CRM', version: '1.1', active: true },
   { proxmoxId: 1007, templateName: 'Facturare', version: '1.0', active: true },
   { proxmoxId: 1008, templateName: 'Facturare', version: '1.1', active: true }

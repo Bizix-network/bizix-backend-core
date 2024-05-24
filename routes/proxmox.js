@@ -4,7 +4,6 @@ const axios = require('axios');
 const router = express.Router();
 const fs = require('fs');
 const path = require('path');
-const mongoose = require('mongoose');
 const VM = require('../models/VM');
 const IPAddress = require('../models/IPAddress');
 const Template = require('../models/Template');
