@@ -87,59 +87,54 @@ router.post('/create-vm', passport.authenticate('jwt', { session: false }), asyn
     return res.status(400).json({ error: 'All fields are required' });
   }
 
+  let ipAddressDoc = null;
   try {
     console.log('Received request to create VM with the following parameters:', req.body);
 
-   // Verificarea existenței template-ului specificat
-   const template = await Template.findOne({ templateName: vmName, version: vmVersion, active: true });
-   if (!template) {
-     return res.status(400).json({ error: 'Template not found or inactive' });
-   }
+    // Verificarea existenței template-ului specificat
+    const template = await Template.findOne({ templateName: vmName, version: vmVersion, active: true });
+    if (!template) {
+      return res.status(400).json({ error: 'Template not found or inactive' });
+    }
 
-   const { proxmoxId } = template;
-   console.log('Found template with Proxmox ID:', proxmoxId);
+    const { proxmoxId } = template;
+    console.log('Found template with Proxmox ID:', proxmoxId);
 
     // Generarea următorului `vmid` disponibil
     const vmid = await getNextVmid();
     console.log('Generated VMID:', vmid);
 
-     // Alocarea unei adrese IP disponibile
-     const ipAddressDoc = await IPAddress.findOneAndUpdate(
+    // Alocarea unei adrese IP disponibile
+    ipAddressDoc = await IPAddress.findOneAndUpdate(
       { allocatedTo: null },
       { $set: { allocatedTo: userId, allocatedAt: new Date() } },
       { new: true }
     );
 
     if (!ipAddressDoc) {
-      //return res.status(400).json({ error: 'No available IP addresses' });
-      // Aruncă o eroare dacă nu există adrese IP disponibile
       throw new Error('No available IP addresses');
     }
 
     const { ipAddress, gateway } = ipAddressDoc;
     console.log('Allocated IP address:', ipAddress, 'with gateway:', gateway);
 
-  // Clonarea template-ului
-  const completeVmName=`${vmName}-v${vmVersion}-${proxmoxId}`;
-  console.log('Cloning template to create new VM...');
-  const cloneResponse = await proxmoxInstance.post(`/nodes/${node}/qemu/${proxmoxId}/clone`, {
-    newid: vmid,
-    name: completeVmName,
-    target: node,
-    full: 1,
-    format: 'qcow2'
-  });
-  
-  const task = cloneResponse.data.data;
-  console.log('VM cloning task started:', task);
-      
-  // Așteaptă finalizarea sarcinii de clonare
-  console.log('Waiting for VM cloning task to complete...');
-  await waitForTaskCompletion(node, task);
+    // Clonarea template-ului
+    const completeVmName = `${vmName}-v${vmVersion}-${proxmoxId}`;
+    console.log('Cloning template to create new VM...');
+    const cloneResponse = await proxmoxInstance.post(`/nodes/${node}/qemu/${proxmoxId}/clone`, {
+      newid: vmid,
+      name: completeVmName,
+      target: node,
+      full: 1,
+      format: 'qcow2'
+    });
 
-   // Așteaptă finalizarea sarcinii de clonare (opțional)
-   // console.log('Waiting for VM cloning task to complete...');
-   // await new Promise(resolve => setTimeout(resolve, 10000)); // Așteaptă 10 secunde
+    const task = cloneResponse.data.data;
+    console.log('VM cloning task started:', task);
+
+    // Așteaptă finalizarea sarcinii de clonare
+    console.log('Waiting for VM cloning task to complete...');
+    await waitForTaskCompletion(node, task);
 
     // Configurarea adresei IP folosind Cloud-Init
     console.log('Configuring VM IP address with Cloud-Init...');
@@ -198,6 +193,15 @@ router.post('/create-vm', passport.authenticate('jwt', { session: false }), asyn
   } catch (error) {
     console.error('Error during VM creation process:', error.message);
 
+    if (ipAddressDoc) {
+      // Eliberează adresa IP dacă a fost alocată, dar VM-ul nu a fost creat sau pornit cu succes
+      await IPAddress.findOneAndUpdate(
+        { _id: ipAddressDoc._id },
+        { $set: { allocatedTo: null, allocatedAt: null } }
+      );
+      console.log('IP address deallocated due to error.');
+    }
+
     if (error.response) {
       console.error('Full error response:', error.response.data);
       console.error('Error status:', error.response.status);
@@ -207,7 +211,7 @@ router.post('/create-vm', passport.authenticate('jwt', { session: false }), asyn
     } else {
       console.error('Error setting up request:', error.message);
     }
-    
+
     res.status(500).json({ error: error.message, details: error.response ? error.response.data : null });
   }
 });
