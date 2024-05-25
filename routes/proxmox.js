@@ -7,6 +7,7 @@ const path = require('path');
 const VM = require('../models/VM');
 const IPAddress = require('../models/IPAddress');
 const Template = require('../models/Template');
+const configureNginx = require('../utils/configureNginx');
 
 // Configurare Proxmox API Client
 const proxmoxInstance = axios.create({
@@ -189,7 +190,14 @@ router.post('/create-vm', passport.authenticate('jwt', { session: false }), asyn
     // Aici ar trebui să folosești mecanisme de transfer și execuție remote, cum ar fi SSH
     console.log('Initialization script will be transferred and executed on the VM.');
 
-    res.json({ message: 'VM created successfully', task });
+    // Configurarea Nginx pentru subdomeniu
+    const nginxConfigResult = await configureNginx(companyName, ipAddress);
+    if (!nginxConfigResult) {
+          throw new Error('Failed to configure Nginx for the new VM');
+        }
+    
+    res.json({ message: 'VM created and Nginx configured successfully', task });
+   
   } catch (error) {
     console.error('Error during VM creation process:', error.message);
 
