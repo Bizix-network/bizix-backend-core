@@ -78,6 +78,25 @@ const getNextVmid = async () => {
   }
 };
 
+// Funcție pentru a șterge VM-ul în caz de eroare
+const deleteVM = async (node, vmid) => {
+  try {
+    console.log(`Shutting down VM ${vmid} on node ${node}...`);
+    await proxmoxInstance.post(`/nodes/${node}/qemu/${vmid}/status/stop`);
+    console.log(`VM ${vmid} shut down successfully.`);
+
+    console.log(`Deleting VM ${vmid} on node ${node}...`);
+    await proxmoxInstance.delete(`/nodes/${node}/qemu/${vmid}`);
+    console.log(`VM ${vmid} deleted successfully.`);
+  } catch (error) {
+    console.error(`Error deleting VM ${vmid} on node ${node}:`, error.message);
+    if (error.response) {
+      console.error('Full error response:', error.response.data);
+    }
+    throw error;
+  }
+};
+
 // Endpoint pentru crearea unei VM pe baza unui template
 router.post('/create-vm', passport.authenticate('jwt', { session: false }), async (req, res) => {
   const { node, vmName, vmVersion, companyName, expiresAt } = req.body;
@@ -208,6 +227,12 @@ router.post('/create-vm', passport.authenticate('jwt', { session: false }), asyn
         { $set: { allocatedTo: null, allocatedAt: null } }
       );
       console.log('IP address deallocated due to error.');
+    }
+
+    if (vmid !== null) {
+      // Șterge VM-ul dacă a fost creat
+      await deleteVM(node, vmid);
+      console.log(`VM ${vmid} deleted due to error.`);
     }
 
     if (error.response) {
