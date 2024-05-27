@@ -97,6 +97,27 @@ const deleteVM = async (node, vmid) => {
   }
 };
 
+// Funcție pentru rollback în cazul în care ștergerea VM-ului eșuează
+const rollbackDeleteVM = async (node, vmid, attempts = 3) => {
+  while (attempts > 0) {
+    try {
+      console.log(`Attempting to delete VM ${vmid} on node ${node}. Attempts remaining: ${attempts}`);
+      await deleteVM(node, vmid);
+      console.log(`VM ${vmid} deleted successfully on attempt ${4 - attempts}.`);
+      return;
+    } catch (error) {
+      console.error(`Error deleting VM ${vmid} on node ${node}. Attempts remaining: ${attempts - 1}`, error.message);
+      attempts -= 1;
+      if (attempts === 0) {
+        console.error(`Failed to delete VM ${vmid} after several attempts. Manual intervention required.`);
+        // Aici poți adăuga logica pentru a trimite o alertă administratorilor
+        throw error;
+      }
+      await new Promise(resolve => setTimeout(resolve, 5000)); // Așteaptă 5 secunde înainte de a încerca din nou
+    }
+  }
+};
+
 // Endpoint pentru crearea unei VM pe baza unui template
 router.post('/create-vm', passport.authenticate('jwt', { session: false }), async (req, res) => {
   const { node, vmName, vmVersion, companyName, expiresAt } = req.body;
@@ -231,8 +252,8 @@ router.post('/create-vm', passport.authenticate('jwt', { session: false }), asyn
 
     if (vmid !== null) {
       // Șterge VM-ul dacă a fost creat
-      await deleteVM(node, vmid);
-      console.log(`VM ${vmid} deleted due to error.`);
+      await rollbackDeleteVM(node, vmid);
+      console.log(`VM ${vmid} deletion process initiated due to error.`);
     }
 
     if (error.response) {
