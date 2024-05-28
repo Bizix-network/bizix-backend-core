@@ -91,6 +91,7 @@ router.post('/create-vm', passport.authenticate('jwt', { session: false }), asyn
   }
 
   let ipAddressDoc = null;
+  let vmid = null;
   try {
     console.log('Received request to create VM with the following parameters:', req.body);
 
@@ -104,7 +105,7 @@ router.post('/create-vm', passport.authenticate('jwt', { session: false }), asyn
     console.log('Found template with Proxmox ID:', proxmoxId);
 
     // Generarea următorului `vmid` disponibil
-    const vmid = await getNextVmid();
+    vmid = await getNextVmid();
     console.log('Generated VMID:', vmid);
 
     // Alocarea unei adrese IP disponibile
@@ -134,6 +135,8 @@ router.post('/create-vm', passport.authenticate('jwt', { session: false }), asyn
 
     const task = cloneResponse.data.data;
     console.log('VM cloning task started:', task);
+
+    console.log(`VM ${vmid} cloned successfully.`);
 
     // Așteaptă finalizarea sarcinii de clonare
     console.log('Waiting for VM cloning task to complete...');
@@ -175,6 +178,7 @@ router.post('/create-vm', passport.authenticate('jwt', { session: false }), asyn
 
     await newVM.save();
     console.log('VM details saved to database');
+    console.log(`current VM ID ${vmid}`);
 
     // Adăugarea scriptului de inițializare
     const initScript = `
@@ -203,7 +207,7 @@ router.post('/create-vm', passport.authenticate('jwt', { session: false }), asyn
     if (!dnsConfigResult) {
       throw new Error('Failed to configure DNS for the new VM');
     }
-
+    console.log(`current VM ID ${vmid}`);
     res.json({ message: 'VM created, Nginx and DNS configured successfully', task });
    
   } catch (error) {
@@ -217,11 +221,13 @@ router.post('/create-vm', passport.authenticate('jwt', { session: false }), asyn
       );
       console.log('IP address deallocated due to error.');
     }
-
+    console.log(`current VM ID ${vmid}`);
     if (vmid !== null) {
       // Șterge VM-ul dacă a fost creat
       await rollbackDeleteVM(node, vmid);
       console.log(`VM ${vmid} deletion process initiated due to error.`);
+    } else {
+      console.log('No VM created, no deletion necessary.');
     }
 
     if (error.response) {
