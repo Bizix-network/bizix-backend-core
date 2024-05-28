@@ -4,8 +4,12 @@ const passport = require('passport');
 const mongoose = require('mongoose');
 require('dotenv').config(); // Incarca variabilele din .env
 require('./config/passport'); // Configurare Passport
+
 const authRoutes = require('./routes/auth');
 const proxmoxRoutes = require('./routes/proxmox');
+const templatesRoute = require('./routes/templates'); 
+const vmsRoute = require('./routes/vms');
+
 const cors = require('cors');
 
 const app = express();
@@ -24,6 +28,8 @@ app.use(passport.initialize());
 
 app.use('/', authRoutes);
 app.use('/proxmox', proxmoxRoutes);
+app.use('/api/templates', templatesRoute);
+app.use('/api/vms', vmsRoute);
 
 // Setarea strictQuery
 mongoose.set('strictQuery', true);
