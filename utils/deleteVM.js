@@ -1,4 +1,5 @@
 const axios = require('axios');
+const VM = require('../models/VM');
 
 // Configurare Proxmox API Client
 const proxmoxInstance = axios.create({
@@ -35,6 +36,11 @@ const rollbackDeleteVM = async (node, vmid, attempts = 3) => {
       console.log(`Attempting to delete VM ${vmid} on node ${node}. Attempts remaining: ${attempts}`);
       await deleteVM(node, vmid);
       console.log(`VM ${vmid} deleted successfully on attempt ${4 - attempts}.`);
+
+      // Ștergerea înregistrării VM din baza de date MongoDB
+      await VM.deleteOne({ vmid });
+      console.log(`VM ${vmid} entry deleted from MongoDB.`);
+
       return;
     } catch (error) {
       console.error(`Error deleting VM ${vmid} on node ${node}. Attempts remaining: ${attempts - 1}`, error.message);

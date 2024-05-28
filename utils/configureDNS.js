@@ -4,6 +4,7 @@ const configureDNS = async (domain, subdomain, ipAddress) => {
   const cpanelUrl = `https://${process.env.CPANEL_HOST}:2083/json-api/cpanel`;
   const token = process.env.CPANEL_API_TOKEN;
 
+  console.log('Trying to connect to cPanel API on host :', cpanelUrl);
   try {
     const response = await axios.get(cpanelUrl, {
       params: {

@@ -8,7 +8,7 @@ const VM = require('../models/VM');
 const IPAddress = require('../models/IPAddress');
 const Template = require('../models/Template');
 const configureNginx = require('../utils/configureNginx');
-const configureDNS = require('../utils/configureDNS');
+const configureCloudflareDNS = require('../utils/configureCloudflareDNS');
 const { deleteVM, rollbackDeleteVM } = require('../utils/deleteVM');
 
 // Configurare Proxmox API Client
@@ -106,6 +106,7 @@ router.post('/create-vm', passport.authenticate('jwt', { session: false }), asyn
 
     // Generarea următorului `vmid` disponibil
     vmid = await getNextVmid();
+    vmid++;
     console.log('Generated VMID:', vmid);
 
     // Alocarea unei adrese IP disponibile
@@ -202,8 +203,10 @@ router.post('/create-vm', passport.authenticate('jwt', { session: false }), asyn
           throw new Error('Failed to configure Nginx for the new VM');
         }
     
-    // Configurarea DNS pentru subdomeniu în cPanel
-    const dnsConfigResult = await configureDNS('bizix.ro', companyName, ipAddress); 
+    // Configurarea DNS pentru subdomeniu în Cloudflare
+    const cloudflareZoneId = process.env.CLOUDFLARE_ZONE_ID; // Adaugă Zone ID 
+    const bridgeipAddress=process.env.BRIDGE_IP_ADDRESS;
+    const dnsConfigResult = await configureCloudflareDNS(cloudflareZoneId, `${companyName}.bizix.ro`, bridgeipAddress);
     if (!dnsConfigResult) {
       throw new Error('Failed to configure DNS for the new VM');
     }
