@@ -3,7 +3,8 @@ const IPAddress = require('../models/IPAddress');
 const Template = require('../models/Template');
 const VM = require('../models/VM'); // Importă modelul VM
 
-mongoose.connect('mongodb://bizixdb:asdadasdadadssad@127.0.0.1:27017/bizix1');
+//mongoose.connect('mongodb://bizixdb:asdadasdadadssad@127.0.0.1:27017/bizix1');
+mongoose.connect('mongodb://127.0.0.1:27017/bizix1');
 
 const ipAddresses = [
   { ipAddress: '10.2.3.120', gateway: '10.2.3.1' },
