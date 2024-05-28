@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const IPAddress = require('../models/IPAddress');
 const Template = require('../models/Template');
+const VM = require('../models/VM'); // Importă modelul VM
 
 mongoose.connect('mongodb://bizixdb:asdadasdadadssad@127.0.0.1:27017/bizix1');
 
@@ -43,8 +44,12 @@ mongoose.connection.once('open', async () => {
     // Inserarea noilor template-uri
     await Template.insertMany(templates);
     console.log('Template-uri inserate cu succes');
+
+    // Șterge toate documentele existente în colecția VM
+    await VM.deleteMany({});
+    console.log('Colecția VM a fost ștearsă cu succes.');
   } catch (err) {
-    console.error('Eroare la manipularea colecției IPAddress:', err);
+    console.error('Eroare la manipularea colecțiilor:', err);
   } finally {
     // Închide conexiunea la baza de date
     mongoose.connection.close();
