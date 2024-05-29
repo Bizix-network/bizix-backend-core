@@ -9,6 +9,7 @@ const authRoutes = require('./routes/auth');
 const proxmoxRoutes = require('./routes/proxmox');
 const templatesRoute = require('./routes/templates'); 
 const vmsRoute = require('./routes/vms');
+const usersRoute = require('./routes/users');
 
 const cors = require('cors');
 
@@ -30,6 +31,7 @@ app.use('/', authRoutes);
 app.use('/proxmox', proxmoxRoutes);
 app.use('/api/templates', templatesRoute);
 app.use('/api/vms', vmsRoute);
+app.use('/api/users', usersRoute);
 
 // Setarea strictQuery
 mongoose.set('strictQuery', true);
