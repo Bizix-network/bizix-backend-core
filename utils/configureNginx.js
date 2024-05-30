@@ -1,12 +1,13 @@
 const axios = require('axios');
 
-const configureNginx = async (companyName, vmIp) => {
+const configureNginx = async (companyName, vmIp, vmid) => {
   const nginxServerUrl = `http://10.2.3.2:3000/configure-nginx`; // Adresa IP a serverului bizix-bridge-backend
 
   try {
     const response = await axios.post(nginxServerUrl, {
       companyName,
-      vmIp
+      vmIp,
+      vmid
     }, {
       headers: {
         'x-api-key': process.env.API_TOKEN // Token-ul API, dacă este necesar

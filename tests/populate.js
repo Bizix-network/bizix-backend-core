@@ -70,12 +70,12 @@ mongoose.connection.once('open', async () => {
     console.log('Colecția VM a fost ștearsă cu succes.');
 
     // Șterge toate documentele existente în colecția User
-    await User.deleteMany({});
-    console.log('Colecția User a fost ștearsă cu succes.');
+    //await User.deleteMany({});
+    //console.log('Colecția User a fost ștearsă cu succes.');
 
     // Inserarea utilizatorului admin
-    await User.create(adminUser);
-    console.log('Utilizatorul admin a fost inserat cu succes.');
+    //await User.create(adminUser);
+    //console.log('Utilizatorul admin a fost inserat cu succes.');
   } catch (err) {
     console.error('Eroare la manipularea colecțiilor:', err);
   } finally {

@@ -80,11 +80,32 @@ const getNextVmid = async () => {
   }
 };
 
-// Endpoint pentru crearea unei VM pe baza unui template
-router.post('/create-vm', passport.authenticate('jwt', { session: false }), async (req, res) => {
-  const { node, vmName, vmVersion, companyName, expiresAt } = req.body;
-  const userId = req.user._id;
+// Funcție pentru a genera `publicURL`
+const generatePublicURL = (username, vmid) => {
+  return `http://${username}.bizix.ro/${vmid}`;
+};
 
+// Middleware pentru a permite apeluri interne fără autentificare - AUTENTIFICAREA CU JWT LA ACEST CALL VA FI DEZACTIVATA IN PRODUCTIE
+const internalRequestMiddleware = (req, res, next) => {
+  const internalApiKey = req.headers['internal-api-key'];
+  const allowedIps = ['127.0.0.1', '::1']; // Adaugă aici IP-urile permise
+
+  if (allowedIps.includes(req.ip) && internalApiKey === process.env.INTERNAL_API_KEY) {
+    console.log(`Internal request from IP: ${req.ip}`);
+    return next(); // Permite apelurile interne fără autentificare JWT
+  }
+
+  console.warn(`Unauthorized attempt from IP: ${req.ip}`);
+  return passport.authenticate('jwt', { session: false })(req, res, next);
+};
+
+// Endpoint pentru crearea unei VM pe baza unui template
+// vechea forma de declarare doar cu JWT : router.post('/create-vm', passport.authenticate('jwt', { session: false }), async (req, res) => {
+  router.post('/create-vm', internalRequestMiddleware, async (req, res) => {
+  const { node, vmName, vmVersion, companyName, expiresAt, userId } = req.body;
+  //const userId = req.user._id; //cand EuPlatesc apeleaza webhook-ul si atunci nu se mai face autentificarea JWT, apelul /create-vm nu va mai avea req.user populat corect
+  const effectiveUserId = req.user ? req.user._id : userId;
+  
   // Verificarea câmpurilor necesare
   if (!node || !vmName || !vmVersion || !companyName || !expiresAt) {
     return res.status(400).json({ error: 'All fields are required' });
@@ -106,13 +127,13 @@ router.post('/create-vm', passport.authenticate('jwt', { session: false }), asyn
 
     // Generarea următorului `vmid` disponibil
     vmid = await getNextVmid();
-    vmid++;
+    
     console.log('Generated VMID:', vmid);
 
     // Alocarea unei adrese IP disponibile
     ipAddressDoc = await IPAddress.findOneAndUpdate(
       { allocatedTo: null },
-      { $set: { allocatedTo: userId, allocatedAt: new Date() } },
+      { $set: { allocatedTo: effectiveUserId, allocatedAt: new Date() } },
       { new: true }
     );
 
@@ -162,18 +183,20 @@ router.post('/create-vm', passport.authenticate('jwt', { session: false }), asyn
     const startResponse = await proxmoxInstance.post(`/nodes/${node}/qemu/${vmid}/status/start`);
     console.log('VM started:', startResponse.data);
 
+    // Generarea `publicURL`
+    const publicURL = generatePublicURL(companyName, vmid);
+    console.log(`publicURL: ${publicURL}`);
+    
     // Salvarea informațiilor VM în baza de date
     const newVM = new VM({
       vmid,
-      userId,
+      userId: effectiveUserId,
       name: vmName,
       node,
-      storage: 0, // Storage-ul specificat la clonare, nu este necesar aici
-      memory: 0, // Configurația hardware a template-ului
-      cores: 0, // Configurația hardware a template-ului
-      diskSize: 0, // Configurația hardware a template-ului
       companyName,
       expiresAt,
+      publicURL,
+      templateId: template._id,
       status: 'created'
     });
 
@@ -198,7 +221,7 @@ router.post('/create-vm', passport.authenticate('jwt', { session: false }), asyn
     console.log('Initialization script will be transferred and executed on the VM.');
 
     // Configurarea Nginx pentru subdomeniu
-    const nginxConfigResult = await configureNginx(companyName, ipAddress);
+    const nginxConfigResult = await configureNginx(companyName, ipAddress, vmid);
     if (!nginxConfigResult) {
           throw new Error('Failed to configure Nginx for the new VM');
         }
