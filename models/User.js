@@ -29,6 +29,14 @@ const UserSchema = new mongoose.Schema({
       type: String,
       required: false
     },
+    companyName: {
+      type: String,
+      required: false
+    },
+    companyID: {
+      type: String,
+      required: false
+    },
     address: {
       type: String,
       required: false
