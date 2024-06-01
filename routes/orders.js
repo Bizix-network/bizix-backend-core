@@ -4,15 +4,13 @@ const axios = require('axios');
 const crypto = require('crypto');
 const Order = require('../models/Order');
 const mongoose = require('mongoose');
+const passport = require('passport');
 
-router.post('/create-order', async (req, res) => {
-  const { userId, templateId, billingDetails, amount, currency, node, vmName, vmVersion } = req.body;
+router.post('/create-order', passport.authenticate('jwt', { session: false }), async (req, res) => {
+  const { templateId, billingDetails, amount, currency, node, vmName, vmVersion } = req.body;
   
-  //const userIdObject = new mongoose.Types.ObjectId(userId);
-  //const templateIdObject = new mongoose.Types.ObjectId(templateId);
-  const { ObjectId } = require('mongodb');
-  const userIdObject = new ObjectId(userId);
-  const templateIdObject = new ObjectId(templateId);
+  const templateIdObject = mongoose.Types.ObjectId.createFromHexString(templateId);
+  const userId = req.user._id;
 
   console.log('Received order creation request with data:', req.body);
 
@@ -42,7 +40,7 @@ router.post('/create-order', async (req, res) => {
   console.log('Generated fp_hash:', hmacx);
 
   const newOrder = new Order({
-    userId: userIdObject,
+    userId,
     templateId: templateIdObject,
     amount,
     currency,
