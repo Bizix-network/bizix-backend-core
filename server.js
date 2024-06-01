@@ -10,6 +10,7 @@ const proxmoxRoutes = require('./routes/proxmox');
 const templatesRoute = require('./routes/templates'); 
 const vmsRoute = require('./routes/vms');
 const usersRoute = require('./routes/users');
+const userRoute = require('./routes/user'); 
 
 const ordersRoute = require('./routes/orders');
 const webhookRoute = require('./routes/webhook');
@@ -35,9 +36,10 @@ app.use('/proxmox', proxmoxRoutes);
 app.use('/api/templates', templatesRoute);
 app.use('/api/vms', vmsRoute);
 app.use('/api/users', usersRoute);
+app.use('/api/user', userRoute); 
 
-app.use('/api/orders', ordersRoute); // Adăugarea rutei orders
-app.use('/api/webhook', webhookRoute); // Adăugarea rutei webhook
+app.use('/api/orders', ordersRoute);
+app.use('/api/webhook', webhookRoute); 
 
 // Setarea strictQuery
 mongoose.set('strictQuery', true);

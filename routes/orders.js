@@ -7,6 +7,12 @@ const mongoose = require('mongoose');
 
 router.post('/create-order', async (req, res) => {
   const { userId, templateId, billingDetails, amount, currency, node, vmName, vmVersion } = req.body;
+  
+  //const userIdObject = new mongoose.Types.ObjectId(userId);
+  //const templateIdObject = new mongoose.Types.ObjectId(templateId);
+  const { ObjectId } = require('mongodb');
+  const userIdObject = new ObjectId(userId);
+  const templateIdObject = new ObjectId(templateId);
 
   console.log('Received order creation request with data:', req.body);
 
@@ -36,8 +42,8 @@ router.post('/create-order', async (req, res) => {
   console.log('Generated fp_hash:', hmacx);
 
   const newOrder = new Order({
-    userId,
-    templateId,
+    userId: userIdObject,
+    templateId: templateIdObject,
     amount,
     currency,
     billingDetails,
