@@ -47,7 +47,7 @@ router.post('/webhook', express.urlencoded({ extended: false }), async (req, res
         // Tranzacție aprobată
         console.log('Transaction approved');
         
-        const invoiceId = mongoose.Types.ObjectId(post_data['invoice_id']);
+        const invoiceId = mongoose.Types.ObjectId.createFromHexString(post_data['invoice_id']);
         const order = await Order.findById(invoiceId);
         if (!order) {
           console.error('Order not found:', post_data['invoice_id']);
