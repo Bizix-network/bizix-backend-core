@@ -5,6 +5,7 @@ const crypto = require('crypto');
 const Order = require('../models/Order');
 const mongoose = require('mongoose');
 const passport = require('passport');
+const logger = require('../utils/logger.js');
 
 router.post('/create-order', passport.authenticate('jwt', { session: false }), async (req, res) => {
   const { templateId, billingDetails, amount, currency, node, vmName, vmVersion } = req.body;
@@ -12,7 +13,7 @@ router.post('/create-order', passport.authenticate('jwt', { session: false }), a
   const templateIdObject = mongoose.Types.ObjectId.createFromHexString(templateId);
   const userId = req.user._id;
 
-  console.log('Received order creation request with data:', req.body);
+  logger('Received order creation request with data:', req.body);
 
   const orderId = new mongoose.Types.ObjectId(); // Generează un ID unic pentru comandă
 
@@ -29,7 +30,7 @@ router.post('/create-order', passport.authenticate('jwt', { session: false }), a
   const datakeys = Object.keys(data);
   let hmac = '';
 
-  console.log('Generating HMAC for data:', data);
+  logger('Generating HMAC for data:', data);
 
   datakeys.forEach(key => {
     hmac += data[key].length + data[key];
@@ -39,7 +40,7 @@ router.post('/create-order', passport.authenticate('jwt', { session: false }), a
   const hmacx = crypto.createHmac("md5", binKey).update(hmac, 'utf8').digest('hex');
   data.fp_hash = hmacx;
 
-  console.log('Generated fp_hash:', hmacx);
+  logger('Generated fp_hash:', hmacx);
 
   const newOrder = new Order({
     _id: orderId, // Folosește ID-ul generat pentru _id
@@ -59,16 +60,16 @@ router.post('/create-order', passport.authenticate('jwt', { session: false }), a
   });
 
   try {
-    console.log('Saving new order to database:', newOrder);
+    logger('Saving new order to database:', newOrder);
     const savedOrder = await newOrder.save();
 
-    console.log('Order saved successfully:', savedOrder);
+    logger('Order saved successfully:', savedOrder);
 
     const esc = encodeURIComponent;
     const query = Object.keys(data).map(k => esc(k) + '=' + esc(data[k])).join('&');
     const redirectURL = `https://secure.euplatesc.ro/tdsprocess/tranzactd.php?${query}`;
 
-    console.log('Generated redirect URL for payment:', redirectURL);
+    logger('Generated redirect URL for payment:', redirectURL);
 
     res.json({ url: redirectURL });
   } catch (error) {

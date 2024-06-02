@@ -1,10 +1,11 @@
 const axios = require('axios');
+const logger = require('./logger.js');
 
 const configureDNS = async (domain, subdomain, ipAddress) => {
   const cpanelUrl = `https://${process.env.CPANEL_HOST}:2083/json-api/cpanel`;
   const token = process.env.CPANEL_API_TOKEN;
 
-  console.log('Trying to connect to cPanel API on host :', cpanelUrl);
+  logger('Trying to connect to cPanel API on host :', cpanelUrl);
   try {
     const response = await axios.get(cpanelUrl, {
       params: {
@@ -21,7 +22,7 @@ const configureDNS = async (domain, subdomain, ipAddress) => {
     });
 
     if (response.data.status === 1) {
-      console.log('DNS record created successfully.');
+      logger('DNS record created successfully.');
       return true;
     } else {
       console.error('Failed to create DNS record:', response.data.errors);

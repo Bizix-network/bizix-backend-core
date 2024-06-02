@@ -16,6 +16,7 @@ const ordersRoute = require('./routes/orders');
 const webhookRoute = require('./routes/webhook');
 
 const cors = require('cors');
+const logger = require('./utils/logger.js');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -49,5 +50,5 @@ mongoose.connect(process.env.MONGODB_URI, {
 mongoose.connection.on('error', console.error.bind(console, 'MongoDB connection error:'));
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  logger(`Server running on port ${PORT}`);
 });

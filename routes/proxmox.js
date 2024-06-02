@@ -10,6 +10,7 @@ const Template = require('../models/Template');
 const configureNginx = require('../utils/configureNginx');
 const configureCloudflareDNS = require('../utils/configureCloudflareDNS');
 const { deleteVM, rollbackDeleteVM } = require('../utils/deleteVM');
+const logger = require('../utils/logger.js');
 
 // Configurare Proxmox API Client
 const proxmoxInstance = axios.create({
@@ -37,7 +38,7 @@ const waitForTaskCompletion = async (node, taskid) => {
     const status = await checkTaskStatus(node, taskid);
     if (status.status === 'stopped') {
       if (status.exitstatus === 'OK') {
-        console.log('Task completed successfully.');
+        logger('Task completed successfully.');
         return;
       } else {
         throw new Error(`Task failed with exit status: ${status.exitstatus}`);
@@ -52,7 +53,7 @@ const checkVMIPConfig = async (node, vmid) => {
   try {
     const response = await proxmoxInstance.get(`/nodes/${node}/qemu/${vmid}/config`);
     const config = response.data.data;
-    console.log('VM IP Configuration:', config);
+    logger('VM IP Configuration:', config);
     return config;
   } catch (error) {
     console.error('Error fetching VM IP configuration:', error.message);
@@ -92,11 +93,11 @@ const internalRequestMiddleware = (req, res, next) => {
 
   const clientIp = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
   
-  console.log('Received internal request with IP:', clientIp);
-  console.log('Received internal API key:', internalApiKey); 
+  logger('Received internal request with IP:', clientIp);
+  logger('Received internal API key:', internalApiKey); 
 
   if (allowedIps.includes(clientIp) && internalApiKey === process.env.INTERNAL_API_KEY) {
-    console.log(`Internal request from IP: ${clientIp}`);
+    logger(`Internal request from IP: ${clientIp}`);
     return next(); // Permite apelurile interne fără autentificare JWT
   }
 
@@ -121,7 +122,7 @@ const internalRequestMiddleware = (req, res, next) => {
   let ipAddressDoc = null;
   let vmid = null;
   try {
-    console.log('Received request to create VM with the following parameters:', req.body);
+    logger('Received request to create VM with the following parameters:', req.body);
 
     // Verificarea existenței template-ului specificat
     const template = await Template.findOne({ templateName: vmName, version: vmVersion, active: true });
@@ -130,12 +131,12 @@ const internalRequestMiddleware = (req, res, next) => {
     }
 
     const { proxmoxId } = template;
-    console.log('Found template with Proxmox ID:', proxmoxId);
+    logger('Found template with Proxmox ID:', proxmoxId);
 
     // Generarea următorului `vmid` disponibil
     vmid = await getNextVmid();
     
-    console.log('Generated VMID:', vmid);
+    logger('Generated VMID:', vmid);
 
     // Alocarea unei adrese IP disponibile
     ipAddressDoc = await IPAddress.findOneAndUpdate(
@@ -149,11 +150,11 @@ const internalRequestMiddleware = (req, res, next) => {
     }
 
     const { ipAddress, gateway } = ipAddressDoc;
-    console.log('Allocated IP address:', ipAddress, 'with gateway:', gateway);
+    logger('Allocated IP address:', ipAddress, 'with gateway:', gateway);
 
     // Clonarea template-ului
     const completeVmName = `${vmName}-v${vmVersion}-${proxmoxId}`;
-    console.log('Cloning template to create new VM...');
+    logger('Cloning template to create new VM...');
     const cloneResponse = await proxmoxInstance.post(`/nodes/${node}/qemu/${proxmoxId}/clone`, {
       newid: vmid,
       name: completeVmName,
@@ -163,36 +164,36 @@ const internalRequestMiddleware = (req, res, next) => {
     });
 
     const task = cloneResponse.data.data;
-    console.log('VM cloning task started:', task);
+    logger('VM cloning task started:', task);
 
-    console.log(`VM ${vmid} cloned successfully.`);
+    logger(`VM ${vmid} cloned successfully.`);
 
     // Așteaptă finalizarea sarcinii de clonare
-    console.log('Waiting for VM cloning task to complete...');
+    logger('Waiting for VM cloning task to complete...');
     await waitForTaskCompletion(node, task);
 
     // Configurarea adresei IP folosind Cloud-Init
-    console.log('Configuring VM IP address with Cloud-Init...');
+    logger('Configuring VM IP address with Cloud-Init...');
     const configResponse = await proxmoxInstance.put(`/nodes/${node}/qemu/${vmid}/config`, {
       'ipconfig0': `ip=${ipAddress}/24,gw=${gateway}`, // Utilizează gateway-ul alocat din baza de date
       'name': `${completeVmName}`,
       'nameserver': '8.8.8.8'
     });
 
-    console.log('VM IP address configured:', configResponse.data);
+    logger('VM IP address configured:', configResponse.data);
 
     // Verificarea configurării IP
     const vmConfig = await checkVMIPConfig(node, vmid);
-    console.log('Verified VM IP Configuration:', vmConfig);
+    logger('Verified VM IP Configuration:', vmConfig);
 
     // Pornirea VM-ului
-    console.log('Starting the VM...');
+    logger('Starting the VM...');
     const startResponse = await proxmoxInstance.post(`/nodes/${node}/qemu/${vmid}/status/start`);
-    console.log('VM started:', startResponse.data);
+    logger('VM started:', startResponse.data);
 
     // Generarea `publicURL`
     const publicURL = generatePublicURL(companyName, vmid);
-    console.log(`publicURL: ${publicURL}`);
+    logger(`publicURL: ${publicURL}`);
     
     // Salvarea informațiilor VM în baza de date
     const newVM = new VM({
@@ -208,8 +209,8 @@ const internalRequestMiddleware = (req, res, next) => {
     });
 
     await newVM.save();
-    console.log('VM details saved to database');
-    console.log(`current VM ID ${vmid}`);
+    logger('VM details saved to database');
+    logger(`current VM ID ${vmid}`);
 
     // Adăugarea scriptului de inițializare
     const initScript = `
@@ -221,11 +222,11 @@ const internalRequestMiddleware = (req, res, next) => {
 
     const scriptPath = path.join(__dirname, 'init.sh');
     fs.writeFileSync(scriptPath, initScript);
-    console.log('Initialization script created:', scriptPath);
+    logger('Initialization script created:', scriptPath);
 
     // Transferul și rularea scriptului de inițializare poate varia în funcție de setup
     // Aici ar trebui să folosești mecanisme de transfer și execuție remote, cum ar fi SSH
-    console.log('Initialization script will be transferred and executed on the VM.');
+    logger('Initialization script will be transferred and executed on the VM.');
 
     // Configurarea Nginx pentru subdomeniu
     const nginxConfigResult = await configureNginx(companyName, ipAddress, vmid);
@@ -240,7 +241,7 @@ const internalRequestMiddleware = (req, res, next) => {
     if (!dnsConfigResult) {
       throw new Error('Failed to configure DNS for the new VM');
     }
-    console.log(`current VM ID ${vmid}`);
+    logger(`current VM ID ${vmid}`);
     res.json({ message: 'VM created, Nginx and DNS configured successfully', task });
    
   } catch (error) {
@@ -252,15 +253,15 @@ const internalRequestMiddleware = (req, res, next) => {
         { _id: ipAddressDoc._id },
         { $set: { allocatedTo: null, allocatedAt: null } }
       );
-      console.log('IP address deallocated due to error.');
+      logger('IP address deallocated due to error.');
     }
-    console.log(`current VM ID ${vmid}`);
+    logger(`current VM ID ${vmid}`);
     if (vmid !== null) {
       // Șterge VM-ul dacă a fost creat
       await rollbackDeleteVM(node, vmid);
-      console.log(`VM ${vmid} deletion process initiated due to error.`);
+      logger(`VM ${vmid} deletion process initiated due to error.`);
     } else {
-      console.log('No VM created, no deletion necessary.');
+      logger('No VM created, no deletion necessary.');
     }
 
     if (error.response) {

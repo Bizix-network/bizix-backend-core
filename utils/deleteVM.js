@@ -1,5 +1,6 @@
 const axios = require('axios');
 const VM = require('../models/VM');
+const logger = require('./logger.js');
 
 // Configurare Proxmox API Client
 const proxmoxInstance = axios.create({
@@ -13,13 +14,13 @@ const proxmoxInstance = axios.create({
 // Funcție pentru a șterge VM-ul
 const deleteVM = async (node, vmid) => {
   try {
-    console.log(`Shutting down VM ${vmid} on node ${node}...`);
+    logger(`Shutting down VM ${vmid} on node ${node}...`);
     await proxmoxInstance.post(`/nodes/${node}/qemu/${vmid}/status/stop`);
-    console.log(`VM ${vmid} shut down successfully.`);
+    logger(`VM ${vmid} shut down successfully.`);
 
-    console.log(`Deleting VM ${vmid} on node ${node}...`);
+    logger(`Deleting VM ${vmid} on node ${node}...`);
     await proxmoxInstance.delete(`/nodes/${node}/qemu/${vmid}`);
-    console.log(`VM ${vmid} deleted successfully.`);
+    logger(`VM ${vmid} deleted successfully.`);
   } catch (error) {
     console.error(`Error deleting VM ${vmid} on node ${node}:`, error.message);
     if (error.response) {
@@ -33,13 +34,13 @@ const deleteVM = async (node, vmid) => {
 const rollbackDeleteVM = async (node, vmid, attempts = 3) => {
   while (attempts > 0) {
     try {
-      console.log(`Attempting to delete VM ${vmid} on node ${node}. Attempts remaining: ${attempts}`);
+      logger(`Attempting to delete VM ${vmid} on node ${node}. Attempts remaining: ${attempts}`);
       await deleteVM(node, vmid);
-      console.log(`VM ${vmid} deleted successfully on attempt ${4 - attempts}.`);
+      logger(`VM ${vmid} deleted successfully on attempt ${4 - attempts}.`);
 
       // Ștergerea înregistrării VM din baza de date MongoDB
       await VM.deleteOne({ vmid });
-      console.log(`VM ${vmid} entry deleted from MongoDB.`);
+      logger(`VM ${vmid} entry deleted from MongoDB.`);
 
       return;
     } catch (error) {

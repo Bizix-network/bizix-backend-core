@@ -3,6 +3,7 @@ const IPAddress = require('../models/IPAddress');
 const Template = require('../models/Template');
 const VM = require('../models/VM');
 const User = require('../models/User');
+const logger = require('../utils/logger.js');
 require('dotenv').config();
 
 //mongoose.connect('mongodb://bizixdb:asdadasdadadssad@127.0.0.1:27017/bizix1');

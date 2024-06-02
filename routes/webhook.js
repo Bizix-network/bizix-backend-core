@@ -4,11 +4,12 @@ const crypto = require('crypto');
 const axios = require('axios');
 const mongoose = require('mongoose');
 const Order = require('../models/Order');
+const logger = require('../utils/logger.js');
 
 // Endpoint pentru webhook EuPlătesc
 router.post('/webhook', express.urlencoded({ extended: false }), async (req, res) => {
   try {
-    console.log('Webhook received:', req.body);
+    logger('Webhook received:', req.body);
 
     const post_data = req.body;
 
@@ -39,13 +40,13 @@ router.post('/webhook', express.urlencoded({ extended: false }), async (req, res
     const binKey = Buffer.from(process.env.EUPLATESC_SECRET_KEY, "hex");
     const hmacx = crypto.createHmac("md5", binKey).update(hmac, 'utf8').digest('hex');
 
-    console.log('Calculated fp_hash:', hmacx);
-    console.log('Received fp_hash:', post_data['fp_hash']);
+    logger('Calculated fp_hash:', hmacx);
+    logger('Received fp_hash:', post_data['fp_hash']);
 
     if (post_data['fp_hash'] === hmacx.toUpperCase()) {
       if (post_data['action'] === "0") {
         // Tranzacție aprobată
-        console.log('Transaction approved');
+        logger('Transaction approved');
         
         const invoiceId = mongoose.Types.ObjectId.createFromHexString(post_data['invoice_id']);
         const order = await Order.findById(invoiceId);
@@ -54,7 +55,7 @@ router.post('/webhook', express.urlencoded({ extended: false }), async (req, res
           throw new Error('Order not found');
         }
 
-        console.log('Order found:', order);
+        logger('Order found:', order);
 
         // Apelează endpoint-ul /create-vm pentru a crea VM-ul
         const vmData = {
@@ -67,7 +68,7 @@ router.post('/webhook', express.urlencoded({ extended: false }), async (req, res
           templateId: order.templateId
         };
 
-        console.log('Sending request to create VM with data:', vmData);
+        logger('Sending request to create VM with data:', vmData);
 
         const response = await axios.post('https://api.bizix.ro/proxmox/create-vm', vmData, {
           headers: {
@@ -75,18 +76,18 @@ router.post('/webhook', express.urlencoded({ extended: false }), async (req, res
           }
         });
 
-        console.log('VM creation response:', response.data);
+        logger('VM creation response:', response.data);
 
         // Actualizează statusul comenzii
         order.status = 'deployed';
         await order.save();
 
-        console.log('Order status updated to deployed');
+        logger('Order status updated to deployed');
 
         res.status(200).send('OK');
       } else {
         // Tranzacție eșuată
-        console.log('Payment not approved. Action:', post_data['action']);
+        logger('Payment not approved. Action:', post_data['action']);
         throw new Error('Payment not approved');
       }
     } else {

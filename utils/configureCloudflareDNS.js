@@ -1,4 +1,5 @@
 const axios = require('axios');
+const logger = require('./logger.js');
 
 const configureCloudflareDNS = async (zoneId, subdomain, ipAddress) => {
   const cloudflareUrl = `https://api.cloudflare.com/client/v4/zones/${zoneId}/dns_records`;
@@ -19,7 +20,7 @@ const configureCloudflareDNS = async (zoneId, subdomain, ipAddress) => {
     });
 
     if (response.data.success) {
-      console.log('DNS record created successfully.');
+      logger('DNS record created successfully.');
       return true;
     } else {
       console.error('Failed to create DNS record:', response.data.errors);
