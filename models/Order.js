@@ -25,6 +25,8 @@ const OrderSchema = new mongoose.Schema({
     default: 'awaiting payment'
   },
   billingDetails: {
+    companyName: String,
+    companyID: String,
     firstName: String,
     lastName: String,
     address: String,

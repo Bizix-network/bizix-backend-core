@@ -88,14 +88,19 @@ const generatePublicURL = (username, vmid) => {
 // Middleware pentru a permite apeluri interne fără autentificare - AUTENTIFICAREA CU JWT LA ACEST CALL VA FI DEZACTIVATA IN PRODUCTIE
 const internalRequestMiddleware = (req, res, next) => {
   const internalApiKey = req.headers['internal-api-key'];
-  const allowedIps = ['127.0.0.1', '::1']; // Adaugă aici IP-urile permise
+  const allowedIps = ['127.0.0.1', '::1', '167.86.73.223', '79.119.240.46']; // aici IP-urile permise
 
-  if (allowedIps.includes(req.ip) && internalApiKey === process.env.INTERNAL_API_KEY) {
-    console.log(`Internal request from IP: ${req.ip}`);
+  const clientIp = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+  
+  console.log('Received internal request with IP:', clientIp);
+  console.log('Received internal API key:', internalApiKey); 
+
+  if (allowedIps.includes(clientIp) && internalApiKey === process.env.INTERNAL_API_KEY) {
+    console.log(`Internal request from IP: ${clientIp}`);
     return next(); // Permite apelurile interne fără autentificare JWT
   }
 
-  console.warn(`Unauthorized attempt from IP: ${req.ip}`);
+  console.warn(`Unauthorized attempt from IP: ${clientIp}`);
   return passport.authenticate('jwt', { session: false })(req, res, next);
 };
 
@@ -103,7 +108,9 @@ const internalRequestMiddleware = (req, res, next) => {
 // vechea forma de declarare doar cu JWT : router.post('/create-vm', passport.authenticate('jwt', { session: false }), async (req, res) => {
   router.post('/create-vm', internalRequestMiddleware, async (req, res) => {
   const { node, vmName, vmVersion, companyName, expiresAt, userId } = req.body;
-  //const userId = req.user._id; //cand EuPlatesc apeleaza webhook-ul si atunci nu se mai face autentificarea JWT, apelul /create-vm nu va mai avea req.user populat corect
+  //const userId = req.user._id; 
+  //cand EuPlatesc apeleaza webhook-ul si atunci nu se mai face autentificarea JWT, 
+  //apelul /create-vm nu va mai avea req.user populat corect asa ca folosim:
   const effectiveUserId = req.user ? req.user._id : userId;
   
   // Verificarea câmpurilor necesare

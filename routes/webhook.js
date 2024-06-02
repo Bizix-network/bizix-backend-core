@@ -62,14 +62,14 @@ router.post('/webhook', express.urlencoded({ extended: false }), async (req, res
           node: order.node,
           vmName: order.vmName,
           vmVersion: order.vmVersion,
-          companyName: order.billingDetails.company,
+          companyName: order.billingDetails.companyName,
           expiresAt: new Date(new Date().setFullYear(new Date().getFullYear() + 1)), // Setează data de expirare la un an de acum
           templateId: order.templateId
         };
 
         console.log('Sending request to create VM with data:', vmData);
 
-        const response = await axios.post('http://127.0.0.1:8984/proxmox/create-vm', vmData, {
+        const response = await axios.post('https://api.bizix.ro/proxmox/create-vm', vmData, {
           headers: {
             'internal-api-key': process.env.INTERNAL_API_KEY // Trimite cheia API internă pentru a permite apelul fără autentificare JWT
           }
