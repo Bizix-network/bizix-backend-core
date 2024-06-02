@@ -14,10 +14,12 @@ router.post('/create-order', passport.authenticate('jwt', { session: false }), a
 
   console.log('Received order creation request with data:', req.body);
 
+  const orderId = new mongoose.Types.ObjectId(); // Generează un ID unic pentru comandă
+
   const data = {
     amount: amount.toFixed(2),
     curr: currency,
-    invoice_id: new mongoose.Types.ObjectId().toString(), // Generăm un ID pentru comandă
+    invoice_id: orderId.toString(),
     order_desc: `Order for template ${templateId}`,
     merch_id: process.env.EUPLATESC_MERCHANT_ID,
     timestamp: new Date().toISOString().replace(/[-:.TZ]/g, "").slice(0, 14),
@@ -40,6 +42,7 @@ router.post('/create-order', passport.authenticate('jwt', { session: false }), a
   console.log('Generated fp_hash:', hmacx);
 
   const newOrder = new Order({
+    _id: orderId, // Folosește ID-ul generat pentru _id
     userId,
     templateId: templateIdObject,
     amount,
