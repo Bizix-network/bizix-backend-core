@@ -19,6 +19,8 @@ const cors = require('cors');
 const logger = require('./utils/logger.js');
 
 const app = express();
+app.set('trust proxy', ['127.0.0.1', '10.2.3.3/8', '167.86.73.223/24']);
+
 const PORT = process.env.PORT || 5000;
 
 // Configurare CORS
