@@ -23,12 +23,78 @@ const ipAddresses = [
 ];
 
 const templates = [
-  { proxmoxId: 1003, templateName: 'ERP', version: '1.0', active: true },
-  { proxmoxId: 1004, templateName: 'ERP', version: '1.1', active: true },
-  { proxmoxId: 1101, templateName: 'CRM', version: '1.0', active: true },
-  { proxmoxId: 1006, templateName: 'CRM', version: '1.1', active: true },
-  { proxmoxId: 1007, templateName: 'Facturare', version: '1.0', active: true },
-  { proxmoxId: 1008, templateName: 'Facturare', version: '1.1', active: true }
+  { 
+    proxmoxId: 1003, 
+    templateName: 'ERP', 
+    description: 'Descriere detaliată pentru ERP 1.0', 
+    shortDescription: 'Descriere scurtă ERP 1.0', 
+    category: 'ERP',
+    rating: 5, 
+    version: '1.0', 
+    dateAdded: new Date('2023-01-01'), 
+    active: true, 
+    blockNumber: '1000001'
+  },
+  { 
+    proxmoxId: 1004, 
+    templateName: 'ERP', 
+    description: 'Descriere detaliată pentru ERP 1.1', 
+    shortDescription: 'Descriere scurtă ERP 1.1', 
+    category: 'ERP',
+    rating: 5, 
+    version: '1.1', 
+    dateAdded: new Date('2023-02-01'), 
+    active: true, 
+    blockNumber: '1000002'
+  },
+  { 
+    proxmoxId: 1101, 
+    templateName: 'CRM', 
+    description: 'Descriere detaliată pentru CRM 1.0', 
+    shortDescription: 'Descriere scurtă CRM 1.0', 
+    category: 'CRM',
+    rating: 5, 
+    version: '1.0', 
+    dateAdded: new Date('2023-03-01'), 
+    active: true, 
+    blockNumber: '1000003'
+  },
+  { 
+    proxmoxId: 1006, 
+    templateName: 'CRM', 
+    description: 'Descriere detaliată pentru CRM 1.1', 
+    shortDescription: 'Descriere scurtă CRM 1.1', 
+    category: 'CRM',
+    rating: 5, 
+    version: '1.1', 
+    dateAdded: new Date('2023-04-01'), 
+    active: true, 
+    blockNumber: '1000004'
+  },
+  { 
+    proxmoxId: 1007, 
+    templateName: 'Facturare', 
+    description: 'Descriere detaliată pentru Facturare 1.0', 
+    shortDescription: 'Descriere scurtă Facturare 1.0', 
+    category: 'Facturare',
+    rating: 5, 
+    version: '1.0', 
+    dateAdded: new Date('2023-05-01'), 
+    active: true, 
+    blockNumber: '1000005'
+  },
+  { 
+    proxmoxId: 1008, 
+    templateName: 'Facturare', 
+    description: 'Descriere detaliată pentru Facturare 1.1', 
+    shortDescription: 'Descriere scurtă Facturare 1.1', 
+    category: 'Facturare',
+    rating: 5, 
+    version: '1.1', 
+    dateAdded: new Date('2023-06-01'), 
+    active: true, 
+    blockNumber: '1000006'
+  }
 ];
 
 // Datele utilizatorului
