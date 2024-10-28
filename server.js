@@ -24,11 +24,21 @@ app.set('trust proxy', ['127.0.0.1', '10.2.3.3/8', '167.86.73.223/24']);
 const PORT = process.env.PORT || 5000;
 
 // Configurare CORS
+const allowedOrigins = ['http://127.0.0.1:5173', 'http://localhost:3002', 'http://localhost:3001', 'http://localhost:3000', 'http://localhost:5173'];
+
 app.use(cors({
-  origin: 'http://127.0.0.1:5173', // Permite cereri de la această origine
-  methods: ['GET', 'POST', 'PUT', 'DELETE'], // Permite aceste metode HTTP
-  allowedHeaders: ['Content-Type', 'Authorization'], // Permite aceste headere
-  credentials: true // Permite trimiterea cookie-urilor și a credențialelor
+  origin: function (origin, callback) {
+    // Permite cereri fără origine (de exemplu, cereri de la un client local)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
 }));
 
 app.use(bodyParser.json());
