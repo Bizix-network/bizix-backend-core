@@ -23,8 +23,10 @@ app.set('trust proxy', ['127.0.0.1', '10.2.3.3/8', '167.86.73.223/24']);
 
 const PORT = process.env.PORT || 5000;
 
+const BlockchainListener = require('./services/blockchainListener');
+
 // Configurare CORS
-const allowedOrigins = ['http://127.0.0.1:5173', 'http://localhost:3002', 'http://localhost:3001', 'http://localhost:3000', 'http://localhost:5173'];
+const allowedOrigins = ['http://127.0.0.1:5173', 'http://localhost:3002', 'http://localhost:3001', 'http://localhost:3000', 'http://localhost:5173','http://localhost:5174','http://localhost:5175'];
 
 app.use(cors({
   origin: function (origin, callback) {
@@ -61,6 +63,20 @@ mongoose.connect(process.env.MONGODB_URI, {
 });
 mongoose.connection.on('error', console.error.bind(console, 'MongoDB connection error:'));
 
-app.listen(PORT, () => {
-  logger(`Server running on port ${PORT}`);
+const initBlockchainListener = async () => {
+  try {
+    const listener = new BlockchainListener();
+    await listener.connect();
+    await listener.subscribeToEvents();
+    logger('Blockchain listener initialized successfully');
+  } catch (error) {
+    console.error('Failed to initialize blockchain listener:', error);
+  }
+};
+
+mongoose.connection.once('open', () => {
+  app.listen(PORT, async () => {
+    logger(`Server running on port ${PORT}`);
+    await initBlockchainListener();
+  });
 });

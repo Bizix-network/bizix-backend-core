@@ -89,7 +89,7 @@ const generatePublicURL = (username, vmid) => {
 // Middleware pentru a permite apeluri interne fără autentificare - AUTENTIFICAREA CU JWT LA ACEST CALL VA FI DEZACTIVATA IN PRODUCTIE
 const internalRequestMiddleware = (req, res, next) => {
   const internalApiKey = req.headers['internal-api-key'];
-  const allowedIps = ['127.0.0.1', '::1', '167.86.73.223', '79.119.240.46']; // aici IP-urile permise
+  const allowedIps = ['127.0.0.1', '::1', '45.88.189.188', '79.119.240.46']; // aici IP-urile permise
 
   const clientIp = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
   
