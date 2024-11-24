@@ -39,23 +39,23 @@ const OrderSchema = new mongoose.Schema({
   },
   orderDesc: {
     type: String,
-    required: true
+    required: function() { return this.status !== 'deployed'; }
   },
   merchId: {
     type: String,
-    required: true
+    required: function() { return this.status !== 'deployed'; }
   },
   timestamp: {
     type: String,
-    required: true
+    required: function() { return this.status !== 'deployed'; }
   },
   nonce: {
     type: String,
-    required: true
+    required: function() { return this.status !== 'deployed'; }
   },
   fpHash: {
     type: String,
-    required: true
+    required: function() { return this.status !== 'deployed'; }
   },
   node: {
     type: String,

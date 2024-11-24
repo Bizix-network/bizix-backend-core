@@ -28,7 +28,7 @@ class BlockchainListener {
         if (event.section === 'bizixCore' && event.method === 'ProposalApproved') {
           logger('ProposalApproved event detected');
           logger('Event data:', JSON.stringify(event.data.toJSON(), null, 2));
-          // Transmitem numărul blocului curent
+          // Transmitem nr blocului curent
           this.handleProposalApproved(event.data, currentBlock.toString());
         }
       });

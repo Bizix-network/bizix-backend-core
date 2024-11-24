@@ -17,6 +17,62 @@ router.post('/create-order', passport.authenticate('jwt', { session: false }), a
 
   const orderId = new mongoose.Types.ObjectId(); // Generează un ID unic pentru comandă
 
+  // Verificăm dacă plata poate fi bypassed
+  if (process.env.BYPASS_PAYMENT === 'true') {
+    logger('Bypassing payment processing');
+    
+    const newOrder = new Order({
+      _id: orderId,
+      userId,
+      templateId: templateIdObject,
+      amount,
+      currency,
+      billingDetails,
+      status: 'deployed', // Setăm direct statusul ca deployed
+      node,
+      vmName,
+      vmVersion,
+      orderDesc: `Bypassed Order for Template ${templateId}`,
+      merchId: 'BYPASS',
+      timestamp: new Date().toISOString(),
+      nonce: crypto.randomBytes(16).toString('hex'),
+      fpHash: crypto.randomBytes(32).toString('hex')
+    });
+
+    try {
+      const savedOrder = await newOrder.save();
+      logger('Order saved successfully:', savedOrder);
+
+      // Apelăm direct create-vm
+      const vmData = {
+        userId,
+        node,
+        vmName,
+        vmVersion,
+        companyName: billingDetails.companyName,
+        expiresAt: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
+        templateId: templateIdObject
+      };
+
+      const response = await axios.post('https://api.bizix.ro/proxmox/create-vm', vmData, {
+        headers: {
+          'internal-api-key': process.env.INTERNAL_API_KEY
+        }
+      });
+
+      logger('VM creation response:', response.data);
+
+      return res.json({ 
+        url: 'bypass', // Un indicator că plata a fost bypassed
+        message: 'Order created and VM deployed successfully', 
+        orderId 
+      });
+    } catch (error) {
+      console.error('Error processing bypassed order:', error.message);
+      return res.status(500).json({ error: error.message });
+    }
+  }
+
   const data = {
     amount: amount.toFixed(2),
     curr: currency,
